@@ -1,5 +1,5 @@
 const db = require("mongoose");
- 
+const bcrypt = require("bcrypt"); // Import bcrypt
 require("dotenv").config();
 
 db.connect(process.env.MONGODB_URI).then(()=>{
@@ -8,12 +8,25 @@ db.connect(process.env.MONGODB_URI).then(()=>{
     console.error("Database Connection Failed:", err);
 });
 
+// Admin Schema
 const AdminSchema = new db.Schema({
     username: { type: String, required: true, unique: true },
     password: { type: String, required: true }
 });
 
+// Hash password before saving
+AdminSchema.pre("save", async function (next) {
+    if (!this.isModified("password")) return next();
+    try {
+        const salt = await bcrypt.genSalt(10);
+        this.password = await bcrypt.hash(this.password, salt);
+        next();
+    } catch (err) {
+        next(err);
+    }
+});
 
+// User Schema
 const UserSchema = new db.Schema({
     username: { type: String, required: true, unique: true },
     password: { type: String, required: true },
@@ -23,7 +36,19 @@ const UserSchema = new db.Schema({
     }]
 });
 
+// Hash password before saving
+UserSchema.pre("save", async function (next) {
+    if (!this.isModified("password")) return next();
+    try {
+        const salt = await bcrypt.genSalt(10);
+        this.password = await bcrypt.hash(this.password, salt);
+        next();
+    } catch (err) {
+        next(err);
+    }
+});
 
+// Course Schema
 const CourseSchema = new db.Schema({
     title : String,
     description : String,
@@ -31,11 +56,9 @@ const CourseSchema = new db.Schema({
     price : Number
 });
 
-
-const Admin = db.model('Admin',AdminSchema);
-const User = db.model('User',UserSchema);
-const Course = db.model('Course',CourseSchema);
-
+const Admin = db.model('Admin', AdminSchema);
+const User = db.model('User', UserSchema);
+const Course = db.model('Course', CourseSchema);
 
 module.exports = {
     Admin,

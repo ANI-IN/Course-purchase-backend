@@ -4,18 +4,16 @@ const userMiddleware = require("../middleware/user");
 const jwt = require("jsonwebtoken");
 const config = require("../config");
 const router = Router();
- 
+const bcrypt = require("bcrypt"); 
 
 
-router.post("/signup",async(req,res)=>{
-    const username = req.body.username;
-    const password = req.body.password;
+router.post("/signup", async (req, res) => {
+    const { username, password } = req.body;
 
     try {
-         
         const newUser = await User.create({
             username: username,
-            password: password
+            password: password // Password will be hashed automatically (from db/index.js)
         });
 
         if (newUser) {
@@ -88,11 +86,14 @@ router.post("/signin", async (req, res) => {
             return res.status(401).send({ message: "Invalid username or password" });
         }
 
- 
+        const isPasswordValid = await bcrypt.compare(password, user.password); // Compare passwords
+        if (!isPasswordValid) {
+            return res.status(401).send({ message: "Invalid username or password" });
+        }
+
         const token = jwt.sign({ username: user.username }, config.secret, { expiresIn: "1h" });
 
         return res.status(200).json({ token });
-        
     } catch (error) {
         console.error("Error during signin:", error);
         return res.status(500).send({ message: "Server Error" });

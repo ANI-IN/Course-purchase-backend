@@ -5,16 +5,15 @@ const jwt = require("jsonwebtoken");
 const config = require("../config")
 const router = express.Router(); 
 router.use(express.json());
-
+const bcrypt = require("bcrypt"); 
 
 router.post("/signup", async (req, res) => {
     const { username, password } = req.body;
 
     try {
-        
         const admin = await Admin.create({
             username: username,
-            password: password
+            password: password // Password will be hashed automatically before saving (from db/index.js)
         });
 
         if (admin) {
@@ -66,10 +65,14 @@ router.post("/signin", async (req, res) => {
     const { username, password } = req.body;
 
     try {
-         
         const admin = await Admin.findOne({ username });
 
         if (!admin) {
+            return res.status(401).send({ message: "Invalid username or password" });
+        }
+
+        const isPasswordValid = await bcrypt.compare(password, admin.password); // Compare passwords
+        if (!isPasswordValid) {
             return res.status(401).send({ message: "Invalid username or password" });
         }
 
